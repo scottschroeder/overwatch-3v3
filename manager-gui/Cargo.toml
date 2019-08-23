@@ -1,0 +1,20 @@
+[package]
+name = "manager-gui"
+version = "0.1.0"
+authors = ["Scott Schroeder <scottschroeder@sent.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+conrod = "0.61.1"
+conrod_core = "0.67.0"
+conrod_glium = "0.67.0"
+conrod_winit = "0.67.0"
+glium = { version = "0.24" }
+find_folder = "0.3.0"
+image = "0.21"
+winit = "0.19"
+color-backtrace = { version = "0.2" }
+overwatch = {path = "../overwatch"}
+rusttype = "0.7.7"

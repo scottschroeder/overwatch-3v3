@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+    "overwatch",
+    "manager-gui",
+
+]
+
+[profile.release]
+lto = false
