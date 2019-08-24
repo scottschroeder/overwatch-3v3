@@ -1,4 +1,5 @@
-//! A simple demonstration of how to construct and use Canvasses by splitting up the window.
+#[macro_use]
+extern crate log;
 
 #[macro_use]
 extern crate conrod_core;
@@ -9,7 +10,7 @@ extern crate find_folder;
 extern crate glium;
 extern crate image;
 
-use conrod_core::{Colorable, Labelable, Positionable, Sizeable, Ui, Scalar};
+use conrod_core::{Colorable, Labelable, Positionable, Scalar, Sizeable, Ui};
 use glium::Surface;
 
 use overwatch::overwatch_3v3::{Match, Roster};
@@ -25,70 +26,23 @@ mod support;
 
 type ImageMap = conrod_core::image::Map<glium::texture::Texture2d>;
 type ImageId = conrod_core::image::Id;
-type WidgetId = conrod_core::widget::Id;
+
+use layout::WidgetId;
 
 const OVERWATCH_PORTRAITS: &str = "images/overwatch/portraits/";
 
-mod window_mgmt {
-    use glium::glutin;
-    use rusttype;
-    use crate::support;
-    use crate::app::App;
+mod window_mgmt;
 
-    const WIDTH: u32 = 800;
-    const HEIGHT: u32 = 600;
+mod state;
 
-    pub fn load_font() -> rusttype::Font<'static> {
-        let font_data = include_bytes!("../../assets/fonts/NotoSans/NotoSans-Regular.ttf");
-        let collection = rusttype::FontCollection::from_bytes(font_data as &[u8])
-            .expect("font was invalid?");
-
-        collection
-            .into_font()
-            .expect("expected loading embedded font to succeed")
-    }
-
-    pub fn init_window() -> (glutin::EventsLoop, App) {
-        // Create window.
-        let events_loop = glutin::EventsLoop::new();
-        let window = glutin::WindowBuilder::new()
-            .with_title("Overwatch 3v3 Elimination - Team Manager")
-            .with_dimensions((WIDTH, HEIGHT).into());
-        let context = glutin::ContextBuilder::new().with_vsync(true);
-        let display = glium::Display::new(window, context, &events_loop)
-            .expect("unable to create new window");
-
-        let display = support::GliumDisplayWinitWrapper(display);
-
-        // Create UI and other components.
-        let mut app = App::new(display, &events_loop);
-
-        // Add font.
-        app.ui.fonts.insert(load_font());
-
-        (events_loop, app)
-    }
-
-    pub fn main_window_loop(events: glutin::EventsLoop, mut app: App) {
-
-    }
-}
-mod state {
-    enum State {
-        Match
-    }
-}
-
-mod layout {
-    pub struct Ids;
-}
+mod layout;
 
 mod app {
+    use crate::layout;
+    use crate::support;
     use conrod;
     use glium;
     use glium::glutin;
-    use crate::support;
-    use crate::layout;
 
     type ImageMap = conrod_core::image::Map<glium::texture::Texture2d>;
 
@@ -102,14 +56,16 @@ mod app {
 
     impl App {
         pub fn new(window: support::GliumDisplayWinitWrapper, events: &glutin::EventsLoop) -> Self {
-            let window_dimm = window.0
+            let window_dimm = window
+                .0
                 .gl_window()
                 .window()
                 .get_inner_size()
                 .expect("expected getting window size to succeed.");
 
             // Create UI.
-            let mut ui = conrod_core::UiBuilder::new([window_dimm.width, window_dimm.height]).build();
+            let mut ui =
+                conrod_core::UiBuilder::new([window_dimm.width, window_dimm.height]).build();
             let mut renderer = conrod_glium::Renderer::new(&window.0)
                 .expect("expected loading conrod glium renderer to succeed.");
 
@@ -117,10 +73,12 @@ mod app {
             let mut image_map = ImageMap::new();
             // Instantiate the generated list of widget identifiers.
 
+            let ids = layout::Ids::new(&mut ui.widget_id_generator());
+
             App {
                 ui: ui,
                 display: window,
-                ids: layout::Ids,
+                ids: ids,
                 images: image_map,
                 renderer: renderer,
             }
@@ -128,81 +86,119 @@ mod app {
     }
 }
 
-fn main() {
-    color_backtrace::install();
-    let (mut events_loop, mut app) = window_mgmt::init_window();
+use std::io::Write;
+fn setup_logger(level: u64) {
+    let mut builder = pretty_env_logger::formatted_timed_builder();
 
-    let assets = find_folder::Search::KidsThenParents(3, 5)
-        .for_folder("assets")
-        .unwrap();
-
-    let ids = &mut Ids::new(app.ui.widget_id_generator());
-
-    let portraits = load_ow_portraits(&mut app.images, &app.display.0, &assets);
-    let player_widgets = vec![
-        PlayerWidgets::new(&mut app.ui),
-        PlayerWidgets::new(&mut app.ui),
-        PlayerWidgets::new(&mut app.ui),
+    let noisy_modules = &[
+        "hyper",
+        "mio",
+        "tokio_core",
+        "tokio_reactor",
+        "tokio_threadpool",
+        "fuse::request",
+        "rusoto_core",
+        "want",
     ];
 
-    let history_widgets = vec![
-        HistoryWidgets::new(&mut app.ui),
-        HistoryWidgets::new(&mut app.ui),
-        HistoryWidgets::new(&mut app.ui),
-        HistoryWidgets::new(&mut app.ui),
-        HistoryWidgets::new(&mut app.ui),
-    ];
+    let log_level = match level {
+        //0 => log::Level::Error,
+        0 => log::LevelFilter::Warn,
+        1 => log::LevelFilter::Info,
+        2 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
+    };
 
-    let mut builder_state = MatchState::new(Roster::default());
-
-    // Poll events from the window.
-    let mut event_loop = support::EventLoop::new();
-    'main: loop {
-        // Handle all events.
-        for event in event_loop.next(&mut events_loop) {
-            // Use the `winit` backend feature to convert the winit event to a conrod one.
-            if let Some(event) = support::convert_event(event.clone(), &app.display) {
-                app.ui.handle_event(event);
-                event_loop.needs_update();
-            }
-
-            match event {
-                glium::glutin::Event::WindowEvent { event, .. } => match event {
-                    // Break from the loop upon `Escape`.
-                    glium::glutin::WindowEvent::CloseRequested
-                    | glium::glutin::WindowEvent::KeyboardInput {
-                        input:
-                        glium::glutin::KeyboardInput {
-                            virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
-                            ..
-                        },
-                        ..
-                    } => break 'main,
-                    _ => (),
-                },
-                _ => (),
-            }
-        }
-
-        // Instantiate all widgets in the GUI.
-        builder_widgets(
-            app.ui.set_widgets(),
-            ids,
-            &mut builder_state,
-            &portraits,
-            &player_widgets,
-            &history_widgets,
-        );
-
-        // Render the `Ui` and then display it on the screen.
-        if let Some(primitives) = app.ui.draw_if_changed() {
-            app.renderer.fill(&app.display.0, primitives, &app.images);
-            let mut target = app.display.0.draw();
-            target.clear_color(0.0, 0.0, 0.0, 1.0);
-            app.renderer.draw(&app.display.0, &mut target, &app.images).unwrap();
-            target.finish().unwrap();
+    if level > 1 && level < 4 {
+        for module in noisy_modules {
+            builder.filter_module(module, log::LevelFilter::Info);
         }
     }
+
+    builder.filter_level(log_level);
+    builder.default_format_timestamp(true);
+    //builder.format(|buf, record| writeln!(buf, "{}", record.args()));
+    builder.init();
+}
+
+fn main() {
+    color_backtrace::install();
+    setup_logger(2);
+    let (mut events_loop, mut app) = window_mgmt::init_window();
+    window_mgmt::main_window_loop(events_loop, app);
+    return;
+    //
+    //    let assets = find_folder::Search::KidsThenParents(3, 5)
+    //        .for_folder("assets")
+    //        .unwrap();
+    //
+    //    let ids = &mut Ids::new(app.ui.widget_id_generator());
+    //
+    //    let portraits = load_ow_portraits(&mut app.images, &app.display.0, &assets);
+    //    let player_widgets = vec![
+    //        PlayerWidgets::new(&mut app.ui),
+    //        PlayerWidgets::new(&mut app.ui),
+    //        PlayerWidgets::new(&mut app.ui),
+    //    ];
+    //
+    //    let history_widgets = vec![
+    //        HistoryWidgets::new(&mut app.ui),
+    //        HistoryWidgets::new(&mut app.ui),
+    //        HistoryWidgets::new(&mut app.ui),
+    //        HistoryWidgets::new(&mut app.ui),
+    //        HistoryWidgets::new(&mut app.ui),
+    //    ];
+    //
+    //    let mut builder_state = MatchState::new(Roster::default());
+    //
+    //    // Poll events from the window.
+    //    let mut event_loop = support::EventLoop::new();
+    //    'main: loop {
+    //        // Handle all events.
+    //        for event in event_loop.next(&mut events_loop) {
+    //            // Use the `winit` backend feature to convert the winit event to a conrod one.
+    //            if let Some(event) = support::convert_event(event.clone(), &app.display) {
+    //                app.ui.handle_event(event);
+    //                event_loop.needs_update();
+    //            }
+    //
+    //            match event {
+    //                glium::glutin::Event::WindowEvent { event, .. } => match event {
+    //                    // Break from the loop upon `Escape`.
+    //                    glium::glutin::WindowEvent::CloseRequested
+    //                    | glium::glutin::WindowEvent::KeyboardInput {
+    //                        input:
+    //                        glium::glutin::KeyboardInput {
+    //                            virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
+    //                            ..
+    //                        },
+    //                        ..
+    //                    } => break 'main,
+    //                    _ => (),
+    //                },
+    //                _ => (),
+    //            }
+    //        }
+    //
+    //        // Instantiate all widgets in the GUI.
+    //        builder_widgets(
+    //            app.ui.set_widgets(),
+    //            ids,
+    //            &mut builder_state,
+    //            &portraits,
+    //            &player_widgets,
+    //            &history_widgets,
+    //        );
+    //
+    //        // Render the `Ui` and then display it on the screen.
+    //        if let Some(primitives) = app.ui.draw_if_changed() {
+    //            app.renderer.fill(&app.display.0, primitives, &app.images);
+    //            let mut target = app.display.0.draw();
+    //            target.clear_color(0.0, 0.0, 0.0, 1.0);
+    //            app.renderer.draw(&app.display.0, &mut target, &app.images).unwrap();
+    //            target.finish().unwrap();
+    //        }
+    //    }
 }
 
 fn load_ow_portraits(
@@ -226,8 +222,8 @@ fn load_ow_portraits(
 
 // Load an image from our assets folder as a texture we can draw to the screen.
 fn load_image<P>(display: &glium::Display, path: P) -> glium::texture::Texture2d
-    where
-        P: AsRef<std::path::Path>,
+where
+    P: AsRef<std::path::Path>,
 {
     let path = path.as_ref();
     let rgba_image = image::open(&std::path::Path::new(&path)).unwrap().to_rgba();
@@ -317,12 +313,8 @@ impl MatchState {
 
 fn max_square(id: WidgetId, ui: &Ui) -> Option<Scalar> {
     ui.h_of(id)
-        .and_then(|h| {
-            ui.w_of(id).map(|w| (w, h))
-        })
-        .map(|(w, h)| {
-            w.min(h)
-        })
+        .and_then(|h| ui.w_of(id).map(|w| (w, h)))
+        .map(|(w, h)| w.min(h))
 }
 
 #[derive(Debug)]
@@ -426,7 +418,10 @@ fn builder_widgets(
         .iter()
         .zip(Player::iter())
         .map(|(pw, p)| {
-            vec![pw.portrait(builder_state.selected_player == p), pw.battletag()]
+            vec![
+                pw.portrait(builder_state.selected_player == p),
+                pw.battletag(),
+            ]
         })
         .collect::<Vec<_>>();
 
@@ -591,18 +586,18 @@ fn builder_widgets(
         .wh_of(ids.builder_lose)
         .middle_of(ids.builder_lose)
         .set(ids.builder_lose_button, ui)
-        {
-            builder_state.press_lose()
-        }
+    {
+        builder_state.press_lose()
+    }
 
     for _click in widget::Button::new()
         .color(builder_state.win_color())
         .wh_of(ids.builder_win)
         .middle_of(ids.builder_win)
         .set(ids.builder_win_button, ui)
-        {
-            builder_state.press_win()
-        }
+    {
+        builder_state.press_win()
+    }
 
     if builder_state.builder.validate() {
         for _click in widget::Button::new()
@@ -610,9 +605,9 @@ fn builder_widgets(
             .wh_of(ids.builder_finalize)
             .middle_of(ids.builder_finalize)
             .set(ids.builder_finalize_button, ui)
-            {
-                builder_state.press_finalize()
-            }
+        {
+            builder_state.press_finalize()
+        }
     }
 
     widget::Text::new("Match History")

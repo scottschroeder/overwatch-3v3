@@ -40,6 +40,15 @@ impl Player {
     pub fn iter() -> PlayerEnumIterator {
         Player::into_enum_iter()
     }
+
+    #[inline]
+    pub fn index(self) -> usize {
+        match self {
+            Player::One => 0,
+            Player::Two => 1,
+            Player::Three => 2,
+        }
+    }
     #[inline]
     pub fn numeric(self) -> usize {
         match self {

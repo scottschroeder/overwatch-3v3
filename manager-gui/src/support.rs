@@ -14,6 +14,12 @@ impl conrod_winit::WinitWindow for GliumDisplayWinitWrapper {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum WindowEvent {
+    Glutin(glium::glutin::Event),
+    ReDraw,
+}
+
 /// In most of the examples the `glutin` crate is used for providing the window context and
 /// events while the `glium` crate is used for displaying `conrod_core::render::Primitives` to the
 /// screen.
@@ -34,10 +40,8 @@ impl EventLoop {
     }
 
     /// Produce an iterator yielding all available events.
-    pub fn next(
-        &mut self,
-        events_loop: &mut glium::glutin::EventsLoop,
-    ) -> Vec<glium::glutin::Event> {
+    pub fn next(&mut self, events_loop: &mut glium::glutin::EventsLoop) -> Vec<WindowEvent> {
+        trace!("next: needs update ({:?})", self.ui_needs_update);
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least 16ms
         // since the last yield.
         let last_update = self.last_update;
@@ -49,19 +53,24 @@ impl EventLoop {
 
         // Collect all pending events.
         let mut events = Vec::new();
-        events_loop.poll_events(|event| events.push(event));
+        events_loop.poll_events(|event| events.push(WindowEvent::Glutin(event)));
 
         // If there are no events and the `Ui` does not need updating, wait for the next event.
         if events.is_empty() && !self.ui_needs_update {
             events_loop.run_forever(|event| {
-                events.push(event);
+                events.push(WindowEvent::Glutin(event));
                 glium::glutin::ControlFlow::Break
             });
+        }
+
+        if self.ui_needs_update {
+            events.push(WindowEvent::ReDraw);
         }
 
         self.ui_needs_update = false;
         self.last_update = std::time::Instant::now();
 
+        trace!("events: {:?}", events);
         events
     }
 
