@@ -2,20 +2,19 @@ use crate::app::{App, AppAssets};
 use crate::state::{MatchState, UiEvent};
 use std::collections::VecDeque;
 
-use super::{frame, WidgetId, FOOTER_HEIGHT, HEADER_HEIGHT};
+use super::{frame, WidgetId, FOOTER_HEIGHT};
 use crate::layout::dynamic_matrix::Matrix;
 use crate::layout::{DynamicIds, WidgetHolder};
 use conrod::Scalar;
-use conrod_core::input::keyboard::Key::H;
+
 use conrod_core::UiCell;
 use conrod_core::{
     color,
-    widget::{self, Canvas, Text, TextBox},
+    widget::{self, Canvas, Text},
     Borderable, Colorable, Labelable, Positionable, Sizeable, Widget,
 };
 use overwatch::overwatch_3v3::Player;
 use overwatch::{Hero, Role};
-use winit::DeviceEvent::Button;
 
 const CONTROL_HEIGHT: conrod::Scalar = 130.0;
 const ROSTER_PLAYER_WIDTH: conrod::Scalar = 150.0;
@@ -314,7 +313,7 @@ pub fn create_ui(app: &mut App, state: &MatchState, updates: &mut VecDeque<UiEve
     };
 
     // Match outcome
-    for outcome in widget::Toggle::new(false)
+    for _ in widget::Toggle::new(false)
         .w_h(100.0, 40.0)
         .top_right_with_margins_on(ids.match_record.round_outcome_canvas, 20.0, 20.0)
         .label(outcome_label(state.get_win()))

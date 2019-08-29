@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 use super::{frame, WidgetId, FOOTER_HEIGHT, HEADER_HEIGHT};
 use conrod_core::{
     color,
-    widget::{self, Canvas, Text, TextBox},
+    widget::{self, Canvas, Text},
     Borderable, Colorable, Labelable, Positionable, Sizeable, Widget,
 };
 use overwatch::overwatch_3v3::Player;
@@ -28,7 +28,6 @@ mod textbox {
     const TEXTBOX_PADDING: Scalar = 10.0;
 
     use conrod_core::{
-        color,
         widget::{self, Canvas, Text, TextBox},
         Borderable, Colorable, Labelable, Positionable, Scalar, Sizeable, Widget,
     };

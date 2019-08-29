@@ -1,4 +1,3 @@
-use crate::state::State::RosterSelect;
 use overwatch::overwatch_3v3::{CompBuilder, Match, Player, Roster, Round};
 use overwatch::{BattleTag, Hero, HeroPool};
 use std::mem;

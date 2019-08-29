@@ -6,7 +6,6 @@ use glium::glutin;
 use glium::Surface;
 use overwatch::Hero;
 use rusttype;
-use winit::Event::WindowEvent;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;

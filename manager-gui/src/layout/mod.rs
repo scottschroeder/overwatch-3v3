@@ -15,18 +15,15 @@ pub const BATTLETAG_COLOR: conrod_core::Color = conrod_core::color::LIGHT_BLUE;
 pub use dynamic_ids::{DynamicIds, WidgetHolder};
 
 mod dynamic_ids {
-    use crate::layout::WidgetId;
+
     use conrod_core::widget::id::Generator;
-    use conrod_core::UiCell;
-    use std::cell::RefCell;
-    use std::sync::Mutex;
 
     pub trait WidgetHolder {
         fn allocate_ids(gen: &mut Generator) -> Self;
     }
 
     impl<T> WidgetHolder for DynamicIds<T> {
-        fn allocate_ids(gen: &mut Generator) -> Self {
+        fn allocate_ids(_gen: &mut Generator) -> Self {
             DynamicIds::default()
         }
     }
@@ -114,11 +111,9 @@ pub fn create_ui(app: &mut App, state: &mut State) -> bool {
 }
 
 use crate::layout::match_layout::MatchIds;
-use conrod::widget::matrix::{Element, Elements};
+
 use conrod_core::{
-    color,
-    widget::{self, Canvas},
-    Borderable, Colorable, Labelable, Positionable, Sizeable, UiCell, Widget,
+    color, widget::Canvas, Borderable, Colorable, Labelable, Positionable, Sizeable, UiCell, Widget,
 };
 
 fn frame(ui: &mut conrod_core::UiCell, ids: &Ids, body_id: WidgetId, body: Canvas) {

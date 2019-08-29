@@ -3,7 +3,6 @@ pub type ImageId = conrod_core::image::Id;
 
 use overwatch::Hero;
 use std::collections::BTreeMap;
-use std::path;
 
 const OVERWATCH_PORTRAITS: &str = "images/overwatch/portraits/";
 

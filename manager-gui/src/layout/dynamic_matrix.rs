@@ -1,16 +1,10 @@
 use crate::layout::{DynamicIds, WidgetHolder, WidgetId};
-use conrod_core::widget::id::Generator;
+
 use conrod_core::{Point, UiCell};
 
 use conrod_core::widget;
 use conrod_core::widget::Widget;
 use conrod_core::Scalar;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Direction {
-    Horizontal,
-    Vertical,
-}
 
 #[derive(WidgetCommon)]
 #[allow(missing_copy_implementations)]
@@ -206,11 +200,11 @@ impl<T> Element<T> {
     where
         W: Widget,
     {
-        use conrod_core::{Positionable, Sizeable};
+        use conrod_core::Positionable;
         let Element {
             matrix_id,
-            w,
-            h,
+            w: _,
+            h: _,
             rel_x,
             rel_y,
             ..
@@ -219,9 +213,5 @@ impl<T> Element<T> {
             //.w_h(w, h)
             .x_y_relative_to(matrix_id, rel_x, rel_y)
             .set(widget_id, ui)
-    }
-
-    pub fn pos(&self) -> Point {
-        [self.m_x, self.m_y]
     }
 }

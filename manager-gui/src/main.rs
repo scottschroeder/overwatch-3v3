@@ -4,32 +4,10 @@ extern crate log;
 #[macro_use]
 extern crate conrod_core;
 extern crate conrod_glium;
-#[macro_use]
 extern crate conrod_winit;
 extern crate find_folder;
 extern crate glium;
 extern crate image;
-
-use conrod_core::{Colorable, Labelable, Positionable, Scalar, Sizeable, Ui};
-use glium::Surface;
-use layout::WidgetId;
-use overwatch::{
-    overwatch_3v3::{
-        Match,
-        Roster,
-        CompBuilder,
-        Player
-    },
-    BattleTag,
-    Hero,
-    HeroPool
-};
-use std::{
-    collections::BTreeMap,
-    io::Write,
-    mem,
-    path
-};
 
 mod app;
 mod image_util;
@@ -38,11 +16,10 @@ mod state;
 mod support;
 mod window_mgmt;
 
-
 fn main() {
     color_backtrace::install();
     setup_logger(2);
-    let (mut events_loop, mut app) = window_mgmt::init_window();
+    let (events_loop, app) = window_mgmt::init_window();
     window_mgmt::main_window_loop(events_loop, app);
 }
 

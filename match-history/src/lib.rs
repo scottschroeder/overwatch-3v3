@@ -4,13 +4,11 @@ extern crate log;
 use overwatch;
 use overwatch::{BattleTag, Hero};
 
-use crate::MatchDbError::SqliteError;
-use rusqlite::ffi::Error as RusqliteFfiError;
 use rusqlite::types::Value;
 use rusqlite::Error as RusqliteError;
 use rusqlite::ErrorCode;
 use rusqlite::NO_PARAMS;
-use rusqlite::{Connection, OptionalExtension, Statement};
+use rusqlite::{Connection, OptionalExtension};
 
 use failure::Fail;
 use failure::_core::ops::Deref;
