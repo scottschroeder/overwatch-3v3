@@ -1,9 +1,10 @@
 use crate::app::App;
 use crate::layout;
-use crate::state::State;
+use crate::state::{State, UiEvent};
 use crate::support;
 use glium::glutin;
 use glium::Surface;
+use overwatch::Hero;
 use rusttype;
 use winit::Event::WindowEvent;
 
@@ -47,6 +48,32 @@ pub fn main_window_loop(mut events: glutin::EventsLoop, mut app: App) {
     let mut event_loop = support::EventLoop::new();
 
     let mut state = State::new();
+
+    // THIS BLOCK SKIPS Roster selection
+    if let State::RosterSelect(ref mut rs) = state {
+        rs.roster = vec!["player1".into(), "player2".into(), "player3".into()];
+    }
+    state.event(UiEvent::RosterPlay);
+    state.event(UiEvent::RoundSelectHero(Hero::Widowmaker));
+    state.event(UiEvent::RoundSelectHero(Hero::Moira));
+    state.event(UiEvent::RoundSelectHero(Hero::Mei));
+    state.event(UiEvent::RoundToggleOutcome);
+    state.event(UiEvent::RoundToggleOutcome);
+    state.event(UiEvent::RoundRecord);
+    state.event(UiEvent::RoundSelectHero(Hero::Pharah));
+    state.event(UiEvent::RoundSelectHero(Hero::Torbjorn));
+    state.event(UiEvent::RoundSelectHero(Hero::Mercy));
+    state.event(UiEvent::RoundToggleOutcome);
+    state.event(UiEvent::RoundRecord);
+    state.event(UiEvent::RoundSelectHero(Hero::Roadhog));
+    state.event(UiEvent::RoundSelectHero(Hero::Zarya));
+    state.event(UiEvent::RoundSelectHero(Hero::Zenyatta));
+    state.event(UiEvent::RoundToggleOutcome);
+    state.event(UiEvent::RoundRecord);
+    state.event(UiEvent::RoundSelectHero(Hero::Widowmaker));
+    state.event(UiEvent::RoundSelectHero(Hero::Moira));
+    state.event(UiEvent::RoundSelectHero(Hero::Mei));
+    // END THIS BLOCK SKIPS Roster selection
 
     debug!("Starting event loop.");
 

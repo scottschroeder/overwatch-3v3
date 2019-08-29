@@ -1,9 +1,9 @@
-use self::round::Round;
 use crate::{BattleTag, Hero, HeroPool};
 use std::collections::HashSet;
 
 pub use self::player::Player;
 pub use self::roster::Roster;
+pub use self::round::Round;
 
 mod player;
 
@@ -204,6 +204,28 @@ impl Match {
 
     pub fn iter(&self) -> impl Iterator<Item = &Round> {
         self.rounds.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.rounds.len()
+    }
+
+    pub fn match_outcome(&self) -> Option<bool> {
+        let mut wins = 0;
+        let mut loss = 0;
+        for r in &self.rounds {
+            if r.win {
+                wins += 1;
+            } else {
+                loss += 1;
+            }
+            if wins >= 3 {
+                return Some(true);
+            } else if loss >= 3 {
+                return Some(false);
+            }
+        }
+        None
     }
 
     fn get_duplicate(&self, round: &Round) -> Result<(), MatchHistoryError> {

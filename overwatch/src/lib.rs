@@ -4,7 +4,7 @@ extern crate failure;
 mod hero;
 
 pub use battletag::BattleTag;
-pub use hero::{Hero, HeroPool, HEROPOOL};
+pub use hero::{Hero, HeroPool, Role, HEROPOOL};
 
 mod battletag {
     use std::fmt;
@@ -14,9 +14,11 @@ mod battletag {
         inner: String,
     }
 
-    impl<S: Into<String>> From<S> for BattleTag {
+    impl<S: AsRef<str>> From<S> for BattleTag {
         fn from(s: S) -> BattleTag {
-            BattleTag { inner: s.into() }
+            BattleTag {
+                inner: s.as_ref().to_lowercase(),
+            }
         }
     }
 
@@ -26,6 +28,9 @@ mod battletag {
         }
         pub fn as_str(&self) -> &str {
             self.inner.as_str()
+        }
+        pub fn into_inner(self) -> String {
+            self.inner
         }
     }
 

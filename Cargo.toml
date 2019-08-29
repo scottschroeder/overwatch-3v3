@@ -3,8 +3,10 @@
 members = [
     "overwatch",
     "manager-gui",
+    "match-history",
 
 ]
 
 [profile.release]
 lto = false
+#debug = true # for flamegraph

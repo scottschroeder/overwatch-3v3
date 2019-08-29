@@ -210,6 +210,7 @@ pub fn create_ui(app: &mut App, state: &RosterSelectState, updates: &mut VecDequ
             (ids.roster.footer_canvas, footer_canvas.clone()),
         ])
         .middle_of(ids.root.body)
+        .wh_of(ids.root.body)
         .set(ids.roster.root, ui);
 
     // Battletag input
@@ -273,7 +274,10 @@ pub fn create_ui(app: &mut App, state: &RosterSelectState, updates: &mut VecDequ
         let play = widget::Button::new()
             .color(color::ORANGE)
             .w_h(PLAY_BUTTON_WIDTH, PLAY_BUTTON_HIGHT)
-            .mid_right_with_margin_on(ids.roster.footer_canvas, BATTLETAG_PADDING)
+            .mid_right_with_margin_on(
+                ids.roster.footer_canvas,
+                (FOOTER_HEIGHT - PLAY_BUTTON_HIGHT) / 2.0,
+            )
             .label("play")
             .align_middle_y_of(ids.roster.footer_canvas);
 

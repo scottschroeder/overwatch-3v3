@@ -6,15 +6,67 @@ use std::collections::VecDeque;
 pub type WidgetId = conrod_core::widget::Id;
 
 const HEADER_HEIGHT: conrod::Scalar = 30.0;
-const FOOTER_HEIGHT: conrod::Scalar = 100.0;
+const FOOTER_HEIGHT: conrod::Scalar = 50.0;
 pub const BACKGROUND_RGB: [f32; 3] = [0.0625, 0.46875, 0.3125];
 pub const BACKGROUND: conrod_core::Color =
     conrod_core::Color::Rgba(BACKGROUND_RGB[0], BACKGROUND_RGB[1], BACKGROUND_RGB[2], 1.0);
 pub const BATTLETAG_COLOR: conrod_core::Color = conrod_core::color::LIGHT_BLUE;
 
+pub use dynamic_ids::{DynamicIds, WidgetHolder};
+
+mod dynamic_ids {
+    use crate::layout::WidgetId;
+    use conrod_core::widget::id::Generator;
+    use conrod_core::UiCell;
+    use std::cell::RefCell;
+    use std::sync::Mutex;
+
+    pub trait WidgetHolder {
+        fn allocate_ids(gen: &mut Generator) -> Self;
+    }
+
+    impl<T> WidgetHolder for DynamicIds<T> {
+        fn allocate_ids(gen: &mut Generator) -> Self {
+            DynamicIds::default()
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct DynamicIds<T> {
+        inner: Vec<T>,
+    }
+
+    impl<T> Default for DynamicIds<T> {
+        fn default() -> DynamicIds<T> {
+            DynamicIds { inner: Vec::new() }
+        }
+    }
+
+    impl<T> DynamicIds<T> {
+        pub fn len(&self) -> usize {
+            self.inner.len()
+        }
+    }
+
+    impl<T: WidgetHolder> DynamicIds<T> {
+        pub fn resize(&mut self, size: usize, gen: &mut Generator) {
+            while self.inner.len() <= size {
+                self.inner.push(T::allocate_ids(gen))
+            }
+        }
+    }
+
+    impl<T: Copy> DynamicIds<T> {
+        pub fn get(&self, idx: usize) -> T {
+            self.inner[idx]
+        }
+    }
+}
+
 pub struct Ids {
     root: RootIds,
     roster: roster_layout::RosterIds,
+    match_record: match_layout::MatchIds,
 }
 
 impl Ids {
@@ -22,6 +74,7 @@ impl Ids {
         Ids {
             root: RootIds::new(gen),
             roster: RosterIds::new(gen),
+            match_record: MatchIds::new(gen),
         }
     }
 }
@@ -31,6 +84,7 @@ pub struct RootIds {
     header: WidgetId,
     body: WidgetId,
 }
+
 impl RootIds {
     pub fn new(gen: &mut conrod_core::widget::id::Generator) -> RootIds {
         RootIds {
@@ -59,10 +113,12 @@ pub fn create_ui(app: &mut App, state: &mut State) -> bool {
     update
 }
 
+use crate::layout::match_layout::MatchIds;
+use conrod::widget::matrix::{Element, Elements};
 use conrod_core::{
     color,
     widget::{self, Canvas},
-    Borderable, Colorable, Labelable, Positionable, Sizeable, Widget,
+    Borderable, Colorable, Labelable, Positionable, Sizeable, UiCell, Widget,
 };
 
 fn frame(ui: &mut conrod_core::UiCell, ids: &Ids, body_id: WidgetId, body: Canvas) {
@@ -78,24 +134,8 @@ fn frame(ui: &mut conrod_core::UiCell, ids: &Ids, body_id: WidgetId, body: Canva
         .set(ids.root.root, ui);
 }
 
+mod dynamic_matrix;
+
 mod roster_layout;
-mod match_layout {
 
-    use crate::app::App;
-    use crate::state::{MatchState, UiEvent};
-    use std::collections::VecDeque;
-
-    use super::{frame, WidgetId, FOOTER_HEIGHT, HEADER_HEIGHT};
-    use conrod_core::{
-        color,
-        widget::{self, Canvas, Text, TextBox},
-        Borderable, Colorable, Labelable, Positionable, Sizeable, Widget,
-    };
-
-    pub fn create_ui(app: &mut App, state: &MatchState, updates: &mut VecDeque<UiEvent>) {
-        let ref mut ui = app.ui.set_widgets();
-        let ref ids = app.ids;
-        let body = Canvas::new().color(color::TRANSPARENT).border(0.0);
-        frame(ui, ids, ids.root.body, body);
-    }
-}
+mod match_layout;

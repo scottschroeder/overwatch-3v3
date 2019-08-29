@@ -16,7 +16,7 @@ impl Round {
         self.into_iter()
     }
 
-    fn get_player(&self, player: Player) -> &(BattleTag, Hero) {
+    pub fn get_player(&self, player: Player) -> &(BattleTag, Hero) {
         match player {
             Player::One => &self.player1,
             Player::Two => &self.player2,

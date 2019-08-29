@@ -11,16 +11,19 @@ conrod = "0.61.1"
 conrod_core = "0.67.0"
 conrod_glium = "0.67.0"
 conrod_winit = "0.67.0"
+conrod_derive = "0.67.0"
 glium = { version = "0.24" }
 find_folder = "0.3.0"
 image = "0.21"
 winit = "0.19"
 color-backtrace = { version = "0.2" }
-overwatch = {path = "../overwatch"}
 rusttype = "0.7.7"
 
 log = "0.4"
 pretty_env_logger = "0.3"
+
+overwatch = {path = "../overwatch"}
+match-history = {path = "../match-history"}
 #failure = "0.1.5"
 #clap = "2.33.0"
 #config = "0.9.3"
