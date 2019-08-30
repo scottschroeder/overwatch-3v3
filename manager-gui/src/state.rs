@@ -1,9 +1,12 @@
 use overwatch::overwatch_3v3::{CompBuilder, Match, Player, Roster, Round};
 use overwatch::{BattleTag, Hero, HeroPool};
 use std::mem;
+use match_history::{MatchDb, MatchDbError, open};
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum UiEvent {
+    OpenDatabase(PathBuf),
     RecordBattletag(String),
     EnterBattleTag,
     RemoveFromRoster(Player),
@@ -17,10 +20,29 @@ pub enum UiEvent {
 #[derive(Debug)]
 pub enum State {
     Dummy,
-    RosterSelect(RosterSelectState),
-    Match(MatchState),
+    LoadDatabase(LoadDbState),
+    RosterSelect(RosterSelectState, MatchDb),
+    Match(MatchState, MatchDb),
     Exit,
 }
+
+#[derive(Debug)]
+pub enum LoadDbState {
+    NotReady,
+    Ready(MatchDb),
+    Failure(MatchDbError),
+}
+
+impl LoadDbState {
+    fn open(&mut self, path: PathBuf) {
+        let mut new = match open(&path) {
+            Ok(mdb) =>  LoadDbState::Ready(mdb),
+            Err(e) => LoadDbState::Failure(e),
+        };
+        mem::swap(self, &mut new)
+    }
+}
+
 
 #[derive(Debug, Default)]
 pub struct RosterSelectState {
@@ -67,7 +89,7 @@ impl MatchState {
         self.history.len()
     }
 
-    pub fn match_iter(&self) -> impl Iterator<Item = &Round> {
+    pub fn match_iter(&self) -> impl Iterator<Item=&Round> {
         self.history.iter()
     }
 
@@ -121,88 +143,116 @@ impl MatchState {
 
 impl State {
     pub fn new() -> State {
-        State::RosterSelect(RosterSelectState::default())
+        State::LoadDatabase(LoadDbState::NotReady)
     }
 
-    pub fn transform(&mut self, updates: impl Iterator<Item = UiEvent>) {
+    pub fn transform(&mut self, updates: impl Iterator<Item=UiEvent>) {
         for e in updates {
             self.event(e)
         }
     }
 
-    fn transition_roster_match(&mut self) {
+    fn transition_loaddb_roster(&mut self) {
         let mut state = State::Dummy;
         mem::swap(&mut state, self);
-        let roster_state = match state {
-            State::RosterSelect(r) => r,
-            s => panic!(
-                "attempted invalid state transition from roster -> match: {:#?}",
-                s
-            ),
-        };
-        state = State::Match(MatchState::new(roster_state.into_ow_roster()));
-        mem::swap(&mut state, self);
-    }
-
-    fn transition_match_roster(&mut self) {
-        let mut state = State::Dummy;
-        mem::swap(&mut state, self);
-        let match_state = match state {
-            State::Match(m) => m,
+        let db = match state {
+            State::LoadDatabase( LoadDbState::Ready(db)) =>  db,
             s => panic!(
                 "attempted invalid state transition from match -> roster: {:#?}",
                 s
             ),
         };
 
-        let Roster(p1, p2, p3) = match_state.builder.roster();
+        state = State::RosterSelect(RosterSelectState {
+            battletag: "".to_string(),
+            roster: Vec::new(),
+        }, db);
+        mem::swap(&mut state, self);
+    }
+
+    fn transition_roster_match(&mut self) {
+        let mut state = State::Dummy;
+        mem::swap(&mut state, self);
+        let (roster_state, db) = match state {
+            State::RosterSelect(r, db) => (r, db),
+            s => panic!(
+                "attempted invalid state transition from roster -> match: {:#?}",
+                s
+            ),
+        };
+        state = State::Match(MatchState::new(roster_state.into_ow_roster()), db);
+        mem::swap(&mut state, self);
+    }
+
+    fn transition_match_roster(&mut self) {
+        let mut state = State::Dummy;
+        mem::swap(&mut state, self);
+        let (match_state, db) = match state {
+            State::Match(m, db) => (m, db),
+            s => panic!(
+                "attempted invalid state transition from match -> roster: {:#?}",
+                s
+            ),
+        };
+
+        let MatchState { builder, ..} = match_state;
+
+        let Roster(p1, p2, p3) = builder.roster();
         state = State::RosterSelect(RosterSelectState {
             battletag: "".to_string(),
             roster: vec![p1.into_inner(), p2.into_inner(), p3.into_inner()],
-        });
+        }, db);
         mem::swap(&mut state, self);
     }
 
     pub fn event(&mut self, event: UiEvent) {
         match event {
+            UiEvent::OpenDatabase(path) => {
+                if let State::LoadDatabase(ref mut load_db_state) = self {
+                    load_db_state.open(path);
+                    if let LoadDbState::Ready(db) = load_db_state {
+                        self.transition_loaddb_roster()
+                    }
+                }
+            }
             UiEvent::RecordBattletag(s) => {
-                if let State::RosterSelect(ref mut roster_state) = self {
+                if let State::RosterSelect(ref mut roster_state, _) = self {
                     roster_state.battletag = s;
                 }
-            },
+            }
             UiEvent::EnterBattleTag => {
-                if let State::RosterSelect(ref mut roster_state) = self {
+                if let State::RosterSelect(ref mut roster_state,_) = self {
                     if roster_state.roster.len() < 3 {
                         let mut bt = String::new();
                         mem::swap(&mut bt, &mut roster_state.battletag);
                         roster_state.roster.push(bt);
                     }
                 }
-            },
+            }
             UiEvent::RemoveFromRoster(p) => {
-                if let State::RosterSelect(ref mut roster_state) = self {
+                if let State::RosterSelect(ref mut roster_state,_) = self {
                     let ridx = p.index();
                     if roster_state.roster.len() > ridx {
                         roster_state.roster.remove(p.index());
                     }
                 }
-            },
+            }
             UiEvent::RosterPlay => {
                 self.transition_roster_match();
-            },
+            }
             UiEvent::RoundSelectPlayer(p) => {
-                if let State::Match(ref mut match_state) = self {
+                if let State::Match(ref mut match_state,_) = self {
                     match_state.selected_player = p;
                     match_state.clear_hero_selection(p);
                 }
-            },
+            }
             UiEvent::RoundSelectHero(h) => {
-                if let State::Match(ref mut match_state) = self {
+                if let State::Match(ref mut match_state,_) = self {
                     match_state.select_hero(h)
                 }
-            },
+            }
             UiEvent::RoundToggleOutcome => {
-                if let State::Match(ref mut match_state) = self {
+                if let State::Match(ref mut match_state,_) = self {
                     match_state
                         .builder
                         .set_win(match match_state.builder.get_win() {
@@ -210,9 +260,9 @@ impl State {
                             _ => true,
                         })
                 }
-            },
+            }
             UiEvent::RoundRecord => {
-                if let State::Match(ref mut match_state) = self {
+                if let State::Match(ref mut match_state,_) = self {
                     let mut builder = CompBuilder::new(match_state.builder.roster());
                     mem::swap(&mut match_state.builder, &mut builder);
                     let r = builder.finalize().unwrap();
@@ -223,7 +273,7 @@ impl State {
                         self.transition_match_roster()
                     }
                 }
-            },
+            }
         }
     }
 }

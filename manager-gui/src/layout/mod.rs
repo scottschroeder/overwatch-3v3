@@ -97,10 +97,10 @@ pub fn create_ui(app: &mut App, state: &mut State) -> bool {
     let mut updates = VecDeque::new();
 
     match state {
-        State::RosterSelect(roster_state) => {
+        State::RosterSelect(roster_state, _) => {
             self::roster_layout::create_ui(app, roster_state, &mut updates)
         },
-        State::Match(match_state) => self::match_layout::create_ui(app, match_state, &mut updates),
+        State::Match(match_state, _) => self::match_layout::create_ui(app, match_state, &mut updates),
         State::Exit => (),
         _ => unimplemented!("unknown window state, can not draw UI"),
     }

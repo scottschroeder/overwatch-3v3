@@ -47,9 +47,10 @@ pub fn main_window_loop(mut events: glutin::EventsLoop, mut app: App) {
     let mut event_loop = support::EventLoop::new();
 
     let mut state = State::new();
+    state.event(UiEvent::OpenDatabase("ow3v3.dat".into()));
 
     // THIS BLOCK SKIPS Roster selection
-    if let State::RosterSelect(ref mut rs) = state {
+    if let State::RosterSelect(ref mut rs, _) = state {
         rs.roster = vec!["player1".into(), "player2".into(), "player3".into()];
     }
     state.event(UiEvent::RosterPlay);

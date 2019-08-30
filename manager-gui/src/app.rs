@@ -8,6 +8,7 @@ use crate::image_util;
 use crate::image_util::ImageId;
 use overwatch::Hero;
 use std::collections::BTreeMap;
+use match_history::MatchDb;
 
 pub struct App {
     pub ui: conrod_core::Ui,
