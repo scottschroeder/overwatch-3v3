@@ -5,7 +5,7 @@
 
 
 HEROS="
-dva orisa reinhardt roadhog sigma winston wrecking-ball zarya ashe bastion doomfist genji
+dva orisa reinhardt roadhog echo sigma winston wrecking-ball zarya ashe bastion doomfist genji
 hanzo junkrat mccree mei pharah reaper soldier-76 sombra symmetra torbjorn tracer widowmaker
 ana baptiste brigitte lucio mercy moira zenyatta"
 
